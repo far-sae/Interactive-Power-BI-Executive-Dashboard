@@ -1,0 +1,418 @@
+/*
+ * DAX Measures - Financial Analytics
+ * Purpose: Financial performance metrics and KPIs
+ * Category: Financial Performance
+ */
+
+-- ==========================================
+-- CORE FINANCIAL MEASURES
+-- ==========================================
+
+Total Revenue = 
+CALCULATE(
+    SUM(FactFinancial[Amount]),
+    DimAccount[AccountType] = "Revenue"
+)
+
+Total Expenses = 
+CALCULATE(
+    SUM(FactFinancial[Amount]),
+    DimAccount[AccountType] = "Expense"
+)
+
+Net Income = 
+[Total Revenue] - [Total Expenses]
+
+Net Profit Margin = 
+DIVIDE(
+    [Net Income],
+    [Total Revenue],
+    0
+)
+
+EBITDA = 
+-- Earnings Before Interest, Taxes, Depreciation, and Amortization
+VAR OperatingRevenue = 
+    CALCULATE(
+        SUM(FactFinancial[Amount]),
+        DimAccount[AccountCategory] = "Operating Revenue"
+    )
+VAR OperatingExpenses = 
+    CALCULATE(
+        SUM(FactFinancial[Amount]),
+        DimAccount[AccountCategory] = "Operating Expenses"
+    )
+RETURN
+    OperatingRevenue - OperatingExpenses
+
+EBITDA Margin = 
+DIVIDE(
+    [EBITDA],
+    [Total Revenue],
+    0
+)
+
+-- ==========================================
+-- BUDGET & FORECAST MEASURES
+-- ==========================================
+
+Budget Amount = 
+SUM(FactFinancial[Budget])
+
+Forecast Amount = 
+SUM(FactFinancial[Forecast])
+
+Budget Variance = 
+SUM(FactFinancial[Variance])
+
+Budget Variance % = 
+DIVIDE(
+    [Budget Variance],
+    [Budget Amount],
+    0
+) * 100
+
+Forecast vs Actual = 
+[Total Revenue] - [Forecast Amount]
+
+Forecast vs Actual % = 
+DIVIDE(
+    [Forecast vs Actual],
+    [Forecast Amount],
+    0
+) * 100
+
+Budget Achievement % = 
+DIVIDE(
+    SUM(FactFinancial[Amount]),
+    [Budget Amount],
+    0
+) * 100
+
+-- ==========================================
+-- REVENUE BREAKDOWN
+-- ==========================================
+
+Product Revenue = 
+CALCULATE(
+    SUM(FactFinancial[Amount]),
+    DimAccount[AccountName] = "Product Sales"
+)
+
+Service Revenue = 
+CALCULATE(
+    SUM(FactFinancial[Amount]),
+    DimAccount[AccountName] = "Service Revenue"
+)
+
+Subscription Revenue = 
+CALCULATE(
+    SUM(FactFinancial[Amount]),
+    DimAccount[AccountName] = "Subscription Revenue"
+)
+
+Recurring Revenue = 
+CALCULATE(
+    SUM(FactFinancial[Amount]),
+    DimAccount[AccountSubcategory] = "Recurring Revenue"
+)
+
+Recurring Revenue % = 
+DIVIDE(
+    [Recurring Revenue],
+    [Total Revenue],
+    0
+)
+
+-- ==========================================
+-- EXPENSE BREAKDOWN
+-- ==========================================
+
+Cost of Goods Sold = 
+CALCULATE(
+    SUM(FactFinancial[Amount]),
+    DimAccount[AccountName] = "Cost of Goods Sold"
+)
+
+Sales & Marketing Expense = 
+CALCULATE(
+    SUM(FactFinancial[Amount]),
+    DimAccount[AccountName] = "Sales & Marketing"
+)
+
+R&D Expense = 
+CALCULATE(
+    SUM(FactFinancial[Amount]),
+    DimAccount[AccountName] = "Research & Development"
+)
+
+G&A Expense = 
+CALCULATE(
+    SUM(FactFinancial[Amount]),
+    DimAccount[AccountName] = "General & Administrative"
+)
+
+Operating Expenses = 
+CALCULATE(
+    SUM(FactFinancial[Amount]),
+    DimAccount[AccountCategory] = "Operating Expenses"
+)
+
+-- ==========================================
+-- EXPENSE RATIOS
+-- ==========================================
+
+COGS as % of Revenue = 
+DIVIDE(
+    [Cost of Goods Sold],
+    [Total Revenue],
+    0
+)
+
+S&M as % of Revenue = 
+DIVIDE(
+    [Sales & Marketing Expense],
+    [Total Revenue],
+    0
+)
+
+R&D as % of Revenue = 
+DIVIDE(
+    [R&D Expense],
+    [Total Revenue],
+    0
+)
+
+G&A as % of Revenue = 
+DIVIDE(
+    [G&A Expense],
+    [Total Revenue],
+    0
+)
+
+Operating Expense Ratio = 
+DIVIDE(
+    [Operating Expenses],
+    [Total Revenue],
+    0
+)
+
+-- ==========================================
+-- BALANCE SHEET MEASURES
+-- ==========================================
+
+Total Assets = 
+CALCULATE(
+    SUM(FactFinancial[Amount]),
+    DimAccount[AccountType] = "Asset"
+)
+
+Total Liabilities = 
+CALCULATE(
+    SUM(FactFinancial[Amount]),
+    DimAccount[AccountType] = "Liability"
+)
+
+Cash & Equivalents = 
+CALCULATE(
+    SUM(FactFinancial[Amount]),
+    DimAccount[AccountName] = "Cash & Cash Equivalents"
+)
+
+Accounts Receivable = 
+CALCULATE(
+    SUM(FactFinancial[Amount]),
+    DimAccount[AccountName] = "Accounts Receivable"
+)
+
+Accounts Payable = 
+CALCULATE(
+    SUM(FactFinancial[Amount]),
+    DimAccount[AccountName] = "Accounts Payable"
+)
+
+Working Capital = 
+VAR CurrentAssets = 
+    CALCULATE(
+        SUM(FactFinancial[Amount]),
+        DimAccount[AccountCategory] = "Current Assets"
+    )
+VAR CurrentLiabilities = 
+    CALCULATE(
+        SUM(FactFinancial[Amount]),
+        DimAccount[AccountCategory] = "Current Liabilities"
+    )
+RETURN
+    CurrentAssets - CurrentLiabilities
+
+-- ==========================================
+-- FINANCIAL RATIOS
+-- ==========================================
+
+Current Ratio = 
+VAR CurrentAssets = 
+    CALCULATE(
+        SUM(FactFinancial[Amount]),
+        DimAccount[AccountCategory] = "Current Assets"
+    )
+VAR CurrentLiabilities = 
+    CALCULATE(
+        SUM(FactFinancial[Amount]),
+        DimAccount[AccountCategory] = "Current Liabilities"
+    )
+RETURN
+    DIVIDE(CurrentAssets, CurrentLiabilities, 0)
+
+Debt to Equity Ratio = 
+VAR TotalDebt = [Total Liabilities]
+VAR TotalEquity = 
+    CALCULATE(
+        SUM(FactFinancial[Amount]),
+        DimAccount[AccountType] = "Equity"
+    )
+RETURN
+    DIVIDE(TotalDebt, TotalEquity, 0)
+
+Return on Assets = 
+DIVIDE(
+    [Net Income],
+    [Total Assets],
+    0
+)
+
+-- ==========================================
+-- TIME INTELLIGENCE - FINANCIAL
+-- ==========================================
+
+Revenue YTD = 
+TOTALYTD(
+    [Total Revenue],
+    DimDate[FullDate]
+)
+
+Revenue Previous Year = 
+CALCULATE(
+    [Total Revenue],
+    SAMEPERIODLASTYEAR(DimDate[FullDate])
+)
+
+Revenue YoY Growth % = 
+VAR CurrentYear = [Total Revenue]
+VAR PreviousYear = [Revenue Previous Year]
+RETURN
+    DIVIDE(
+        CurrentYear - PreviousYear,
+        PreviousYear,
+        0
+    ) * 100
+
+Expenses YTD = 
+TOTALYTD(
+    [Total Expenses],
+    DimDate[FullDate]
+)
+
+Net Income YTD = 
+TOTALYTD(
+    [Net Income],
+    DimDate[FullDate]
+)
+
+Net Income Previous Year = 
+CALCULATE(
+    [Net Income],
+    SAMEPERIODLASTYEAR(DimDate[FullDate])
+)
+
+Net Income YoY Growth % = 
+VAR CurrentYear = [Net Income]
+VAR PreviousYear = [Net Income Previous Year]
+RETURN
+    DIVIDE(
+        CurrentYear - PreviousYear,
+        PreviousYear,
+        0
+    ) * 100
+
+-- ==========================================
+-- ROLLING FINANCIAL METRICS
+-- ==========================================
+
+Revenue Last 12 Months = 
+CALCULATE(
+    [Total Revenue],
+    DATESINPERIOD(
+        DimDate[FullDate],
+        LASTDATE(DimDate[FullDate]),
+        -12,
+        MONTH
+    )
+)
+
+Net Income Last 12 Months = 
+CALCULATE(
+    [Net Income],
+    DATESINPERIOD(
+        DimDate[FullDate],
+        LASTDATE(DimDate[FullDate]),
+        -12,
+        MONTH
+    )
+)
+
+Average Monthly Revenue = 
+VAR Last12Months = 
+    CALCULATETABLE(
+        VALUES(DimDate[CalendarYearMonth]),
+        DATESINPERIOD(
+            DimDate[FullDate],
+            LASTDATE(DimDate[FullDate]),
+            -12,
+            MONTH
+        )
+    )
+RETURN
+    DIVIDE(
+        CALCULATE([Total Revenue], Last12Months),
+        COUNTROWS(Last12Months),
+        0
+    )
+
+-- ==========================================
+-- FINANCIAL HEALTH INDICATORS
+-- ==========================================
+
+Financial Health Score = 
+-- Composite score based on multiple factors (0-100)
+VAR ProfitMarginScore = MIN([Net Profit Margin] * 100, 25)
+VAR GrowthScore = MIN([Revenue YoY Growth %], 25)
+VAR BudgetScore = 
+    SWITCH(
+        TRUE(),
+        [Budget Achievement %] >= 95 && [Budget Achievement %] <= 105, 25,
+        [Budget Achievement %] >= 90 && [Budget Achievement %] < 95, 20,
+        [Budget Achievement %] > 105 && [Budget Achievement %] <= 110, 20,
+        [Budget Achievement %] >= 85, 15,
+        10
+    )
+VAR LiquidityScore = 
+    SWITCH(
+        TRUE(),
+        [Current Ratio] >= 2, 25,
+        [Current Ratio] >= 1.5, 20,
+        [Current Ratio] >= 1, 15,
+        10
+    )
+RETURN
+    ProfitMarginScore + GrowthScore + BudgetScore + LiquidityScore
+
+Financial Status = 
+VAR Score = [Financial Health Score]
+RETURN
+    SWITCH(
+        TRUE(),
+        Score >= 80, "Excellent",
+        Score >= 60, "Good",
+        Score >= 40, "Fair",
+        "Needs Attention"
+    )

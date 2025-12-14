@@ -1,0 +1,348 @@
+/*
+ * DAX Measures - Sales & Revenue Analytics
+ * Purpose: Core sales metrics and KPIs for executive dashboard
+ * Category: Sales Performance
+ */
+
+-- ==========================================
+-- BASIC SALES MEASURES
+-- ==========================================
+
+Total Sales = 
+SUM(FactSales[SalesAmount])
+
+Total Quantity = 
+SUM(FactSales[Quantity])
+
+Total Cost = 
+SUM(FactSales[TotalCost])
+
+Gross Profit = 
+SUM(FactSales[GrossProfit])
+
+Gross Profit Margin = 
+DIVIDE(
+    [Gross Profit],
+    [Total Sales],
+    0
+)
+
+Net Sales = 
+SUM(FactSales[NetSales])
+
+Average Order Value = 
+DIVIDE(
+    [Total Sales],
+    DISTINCTCOUNT(FactSales[OrderNumber]),
+    0
+)
+
+Total Orders = 
+DISTINCTCOUNT(FactSales[OrderNumber])
+
+Total Discount = 
+SUM(FactSales[DiscountAmount])
+
+Discount Rate = 
+DIVIDE(
+    [Total Discount],
+    [Total Sales] + [Total Discount],
+    0
+)
+
+-- ==========================================
+-- TIME INTELLIGENCE MEASURES
+-- ==========================================
+
+Sales YTD = 
+TOTALYTD(
+    [Total Sales],
+    DimDate[FullDate]
+)
+
+Sales QTD = 
+TOTALQTD(
+    [Total Sales],
+    DimDate[FullDate]
+)
+
+Sales MTD = 
+TOTALMTD(
+    [Total Sales],
+    DimDate[FullDate]
+)
+
+Sales Previous Year = 
+CALCULATE(
+    [Total Sales],
+    SAMEPERIODLASTYEAR(DimDate[FullDate])
+)
+
+Sales YoY Growth = 
+VAR CurrentYearSales = [Total Sales]
+VAR PreviousYearSales = [Sales Previous Year]
+RETURN
+    DIVIDE(
+        CurrentYearSales - PreviousYearSales,
+        PreviousYearSales,
+        0
+    )
+
+Sales YoY Growth % = 
+[Sales YoY Growth] * 100
+
+Sales Previous Month = 
+CALCULATE(
+    [Total Sales],
+    DATEADD(DimDate[FullDate], -1, MONTH)
+)
+
+Sales MoM Growth = 
+VAR CurrentMonthSales = [Total Sales]
+VAR PreviousMonthSales = [Sales Previous Month]
+RETURN
+    DIVIDE(
+        CurrentMonthSales - PreviousMonthSales,
+        PreviousMonthSales,
+        0
+    )
+
+Sales MoM Growth % = 
+[Sales MoM Growth] * 100
+
+Sales Previous Quarter = 
+CALCULATE(
+    [Total Sales],
+    DATEADD(DimDate[FullDate], -1, QUARTER)
+)
+
+Sales QoQ Growth % = 
+VAR CurrentQuarterSales = [Total Sales]
+VAR PreviousQuarterSales = [Sales Previous Quarter]
+RETURN
+    DIVIDE(
+        CurrentQuarterSales - PreviousQuarterSales,
+        PreviousQuarterSales,
+        0
+    ) * 100
+
+-- ==========================================
+-- ROLLING/MOVING AVERAGES
+-- ==========================================
+
+Sales Last 30 Days = 
+CALCULATE(
+    [Total Sales],
+    DATESINPERIOD(
+        DimDate[FullDate],
+        LASTDATE(DimDate[FullDate]),
+        -30,
+        DAY
+    )
+)
+
+Sales Last 90 Days = 
+CALCULATE(
+    [Total Sales],
+    DATESINPERIOD(
+        DimDate[FullDate],
+        LASTDATE(DimDate[FullDate]),
+        -90,
+        DAY
+    )
+)
+
+Sales 3 Month Moving Average = 
+VAR LastVisibleDate = MAX(DimDate[FullDate])
+VAR Last3Months = 
+    CALCULATETABLE(
+        VALUES(DimDate[CalendarYearMonth]),
+        DATESINPERIOD(
+            DimDate[FullDate],
+            LastVisibleDate,
+            -3,
+            MONTH
+        )
+    )
+RETURN
+    DIVIDE(
+        CALCULATE(
+            [Total Sales],
+            Last3Months
+        ),
+        COUNTROWS(Last3Months),
+        0
+    )
+
+-- ==========================================
+-- RANKING & CONTRIBUTION MEASURES
+-- ==========================================
+
+Sales Rank by Customer = 
+RANKX(
+    ALL(DimCustomer[CustomerName]),
+    [Total Sales],
+    ,
+    DESC,
+    DENSE
+)
+
+Sales % of Total = 
+DIVIDE(
+    [Total Sales],
+    CALCULATE(
+        [Total Sales],
+        ALL(FactSales)
+    ),
+    0
+)
+
+Sales % of Category = 
+DIVIDE(
+    [Total Sales],
+    CALCULATE(
+        [Total Sales],
+        ALLEXCEPT(DimProduct, DimProduct[ProductCategory])
+    ),
+    0
+)
+
+-- ==========================================
+-- CUMULATIVE MEASURES
+-- ==========================================
+
+Cumulative Sales = 
+CALCULATE(
+    [Total Sales],
+    FILTER(
+        ALL(DimDate[FullDate]),
+        DimDate[FullDate] <= MAX(DimDate[FullDate])
+    )
+)
+
+Cumulative Sales YTD = 
+VAR CurrentYear = YEAR(MAX(DimDate[FullDate]))
+RETURN
+    CALCULATE(
+        [Total Sales],
+        FILTER(
+            ALL(DimDate),
+            YEAR(DimDate[FullDate]) = CurrentYear &&
+            DimDate[FullDate] <= MAX(DimDate[FullDate])
+        )
+    )
+
+-- ==========================================
+-- TARGET & VARIANCE MEASURES
+-- ==========================================
+
+Sales Target = 
+-- This would typically come from a targets table
+-- Placeholder calculation: 10% above previous year
+[Sales Previous Year] * 1.10
+
+Sales vs Target = 
+[Total Sales] - [Sales Target]
+
+Sales vs Target % = 
+DIVIDE(
+    [Sales vs Target],
+    [Sales Target],
+    0
+)
+
+Target Achievement % = 
+DIVIDE(
+    [Total Sales],
+    [Sales Target],
+    0
+) * 100
+
+-- ==========================================
+-- CUSTOMER METRICS
+-- ==========================================
+
+Customer Count = 
+DISTINCTCOUNT(FactSales[CustomerKey])
+
+New Customers = 
+VAR CurrentPeriodCustomers = VALUES(FactSales[CustomerKey])
+VAR PreviousPeriodCustomers = 
+    CALCULATETABLE(
+        VALUES(FactSales[CustomerKey]),
+        DATEADD(DimDate[FullDate], -1, YEAR)
+    )
+RETURN
+    COUNTROWS(
+        EXCEPT(CurrentPeriodCustomers, PreviousPeriodCustomers)
+    )
+
+Customer Retention Rate = 
+VAR PreviousPeriodCustomers = 
+    CALCULATETABLE(
+        VALUES(FactSales[CustomerKey]),
+        DATEADD(DimDate[FullDate], -1, YEAR)
+    )
+VAR RetainedCustomers = 
+    COUNTROWS(
+        INTERSECT(
+            VALUES(FactSales[CustomerKey]),
+            PreviousPeriodCustomers
+        )
+    )
+RETURN
+    DIVIDE(
+        RetainedCustomers,
+        COUNTROWS(PreviousPeriodCustomers),
+        0
+    )
+
+Average Revenue Per Customer = 
+DIVIDE(
+    [Total Sales],
+    [Customer Count],
+    0
+)
+
+-- ==========================================
+-- PRODUCT METRICS
+-- ==========================================
+
+Product Count = 
+DISTINCTCOUNT(FactSales[ProductKey])
+
+Average Price = 
+AVERAGE(FactSales[UnitPrice])
+
+Average Units Per Order = 
+DIVIDE(
+    [Total Quantity],
+    [Total Orders],
+    0
+)
+
+-- ==========================================
+-- CONDITIONAL FORMATTING HELPERS
+-- ==========================================
+
+Sales Trend Indicator = 
+VAR GrowthRate = [Sales MoM Growth %]
+RETURN
+    SWITCH(
+        TRUE(),
+        GrowthRate > 5, "▲ Strong Growth",
+        GrowthRate > 0, "↗ Growth",
+        GrowthRate > -5, "↘ Decline",
+        "▼ Strong Decline"
+    )
+
+Performance Status = 
+VAR Achievement = [Target Achievement %]
+RETURN
+    SWITCH(
+        TRUE(),
+        Achievement >= 100, "Exceeding",
+        Achievement >= 90, "On Track",
+        Achievement >= 75, "At Risk",
+        "Below Target"
+    )

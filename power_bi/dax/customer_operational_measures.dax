@@ -1,0 +1,431 @@
+/*
+ * DAX Measures - Customer Analytics & Operational KPIs
+ * Purpose: Customer engagement and operational performance metrics
+ * Category: Customer & Operations
+ */
+
+-- ==========================================
+-- CUSTOMER ENGAGEMENT METRICS
+-- ==========================================
+
+Total Interactions = 
+COUNTROWS(FactCustomerInteraction)
+
+Average Satisfaction Score = 
+AVERAGE(FactCustomerInteraction[SatisfactionScore])
+
+Customer Satisfaction Target = 4.5
+
+Satisfaction Achievement % = 
+DIVIDE(
+    [Average Satisfaction Score],
+    [Customer Satisfaction Target],
+    0
+) * 100
+
+Total Resolved Interactions = 
+CALCULATE(
+    [Total Interactions],
+    FactCustomerInteraction[IsResolved] = TRUE()
+)
+
+Resolution Rate = 
+DIVIDE(
+    [Total Resolved Interactions],
+    [Total Interactions],
+    0
+)
+
+First Contact Resolution Rate = 
+VAR FirstContactResolved = 
+    CALCULATE(
+        COUNTROWS(FactCustomerInteraction),
+        FactCustomerInteraction[IsFirstContact] = TRUE(),
+        FactCustomerInteraction[IsResolved] = TRUE()
+    )
+VAR TotalFirstContacts = 
+    CALCULATE(
+        COUNTROWS(FactCustomerInteraction),
+        FactCustomerInteraction[IsFirstContact] = TRUE()
+    )
+RETURN
+    DIVIDE(FirstContactResolved, TotalFirstContacts, 0)
+
+Average Response Time Hours = 
+AVERAGE(FactCustomerInteraction[ResponseTimeHours])
+
+Average Resolution Time Hours = 
+AVERAGE(FactCustomerInteraction[ResolutionTimeHours])
+
+Average Handle Time Minutes = 
+AVERAGE(FactCustomerInteraction[DurationMinutes])
+
+-- ==========================================
+-- CUSTOMER LIFECYCLE METRICS
+-- ==========================================
+
+Active Customers = 
+CALCULATE(
+    DISTINCTCOUNT(DimCustomer[CustomerKey]),
+    DimCustomer[IsActive] = TRUE()
+)
+
+Customer Lifetime Value = 
+AVERAGEX(
+    VALUES(DimCustomer[CustomerKey]),
+    CALCULATE(
+        [Total Sales],
+        ALL(DimDate)
+    )
+)
+
+Customer Acquisition Cost = 
+-- Assuming S&M expenses divided by new customers
+DIVIDE(
+    [Sales & Marketing Expense],
+    [New Customers],
+    0
+)
+
+LTV to CAC Ratio = 
+DIVIDE(
+    [Customer Lifetime Value],
+    [Customer Acquisition Cost],
+    0
+)
+
+Churn Rate = 
+VAR PreviousPeriodCustomers = 
+    CALCULATETABLE(
+        VALUES(FactSales[CustomerKey]),
+        DATEADD(DimDate[FullDate], -1, YEAR)
+    )
+VAR CurrentPeriodCustomers = VALUES(FactSales[CustomerKey])
+VAR LostCustomers = 
+    COUNTROWS(
+        EXCEPT(PreviousPeriodCustomers, CurrentPeriodCustomers)
+    )
+RETURN
+    DIVIDE(
+        LostCustomers,
+        COUNTROWS(PreviousPeriodCustomers),
+        0
+    )
+
+-- ==========================================
+-- CUSTOMER SEGMENTATION METRICS
+-- ==========================================
+
+Premium Customers = 
+CALCULATE(
+    DISTINCTCOUNT(DimCustomer[CustomerKey]),
+    DimCustomer[CustomerSegment] = "Premium"
+)
+
+Enterprise Customers = 
+CALCULATE(
+    DISTINCTCOUNT(DimCustomer[CustomerKey]),
+    DimCustomer[CustomerType] = "Enterprise"
+)
+
+Revenue from Premium Customers = 
+CALCULATE(
+    [Total Sales],
+    DimCustomer[CustomerSegment] = "Premium"
+)
+
+Premium Customer Revenue % = 
+DIVIDE(
+    [Revenue from Premium Customers],
+    [Total Sales],
+    0
+)
+
+Top 10 Customer Revenue = 
+CALCULATE(
+    [Total Sales],
+    TOPN(
+        10,
+        ALL(DimCustomer),
+        [Total Sales],
+        DESC
+    )
+)
+
+Top 10 Customer Concentration = 
+DIVIDE(
+    [Top 10 Customer Revenue],
+    [Total Sales],
+    0
+)
+
+-- ==========================================
+-- OPERATIONAL METRICS
+-- ==========================================
+
+Orders Processed = 
+SUM(FactOperationalMetrics[OrdersProcessed])
+
+Orders Fulfilled = 
+SUM(FactOperationalMetrics[OrdersFulfilled])
+
+Orders Cancelled = 
+SUM(FactOperationalMetrics[OrdersCancelled])
+
+Fulfillment Rate = 
+DIVIDE(
+    [Orders Fulfilled],
+    [Orders Processed],
+    0
+)
+
+Cancellation Rate = 
+DIVIDE(
+    [Orders Cancelled],
+    [Orders Processed],
+    0
+)
+
+Average Processing Time Hours = 
+AVERAGE(FactOperationalMetrics[AverageProcessingTimeHours])
+
+Inventory Value = 
+SUM(FactOperationalMetrics[InventoryValue])
+
+Inventory Units = 
+SUM(FactOperationalMetrics[InventoryUnits])
+
+Stockout Incidents = 
+SUM(FactOperationalMetrics[StockoutIncidents])
+
+Stockout Rate = 
+VAR TotalDays = DISTINCTCOUNT(FactOperationalMetrics[DateKey])
+VAR DaysWithStockouts = 
+    CALCULATE(
+        DISTINCTCOUNT(FactOperationalMetrics[DateKey]),
+        FactOperationalMetrics[StockoutIncidents] > 0
+    )
+RETURN
+    DIVIDE(DaysWithStockouts, TotalDays, 0)
+
+-- ==========================================
+-- CUSTOMER SERVICE METRICS
+-- ==========================================
+
+Support Tickets Opened = 
+SUM(FactOperationalMetrics[SupportTicketsOpened])
+
+Support Tickets Closed = 
+SUM(FactOperationalMetrics[SupportTicketsClosed])
+
+Ticket Closure Rate = 
+DIVIDE(
+    [Support Tickets Closed],
+    [Support Tickets Opened],
+    0
+)
+
+Average Handle Time Customer Service = 
+AVERAGE(FactOperationalMetrics[AverageHandleTimeMinutes])
+
+First Call Resolution Rate Ops = 
+AVERAGE(FactOperationalMetrics[FirstCallResolutionRate])
+
+-- ==========================================
+-- DIGITAL/WEBSITE METRICS
+-- ==========================================
+
+Website Visitors = 
+SUM(FactOperationalMetrics[WebsiteVisitors])
+
+Website Page Views = 
+SUM(FactOperationalMetrics[WebsitePageViews])
+
+Website Conversion Rate = 
+AVERAGE(FactOperationalMetrics[WebsiteConversionRate])
+
+Average Session Duration = 
+AVERAGE(FactOperationalMetrics[AverageSessionDurationMinutes])
+
+Pages Per Session = 
+DIVIDE(
+    [Website Page Views],
+    [Website Visitors],
+    0
+)
+
+-- ==========================================
+-- EMPLOYEE PRODUCTIVITY METRICS
+-- ==========================================
+
+Employee Count = 
+SUM(FactOperationalMetrics[EmployeeCount])
+
+Employee Utilization Rate = 
+AVERAGE(FactOperationalMetrics[EmployeeUtilizationRate])
+
+Overtime Hours = 
+SUM(FactOperationalMetrics[OvertimeHours])
+
+Revenue Per Employee = 
+DIVIDE(
+    [Total Sales],
+    [Employee Count],
+    0
+)
+
+Orders Per Employee = 
+DIVIDE(
+    [Orders Processed],
+    [Employee Count],
+    0
+)
+
+-- ==========================================
+-- SALES PIPELINE METRICS
+-- ==========================================
+
+Total Pipeline Value = 
+SUM(FactSalesPipeline[EstimatedValue])
+
+Expected Revenue = 
+SUM(FactSalesPipeline[ExpectedRevenue])
+
+Active Opportunities = 
+CALCULATE(
+    DISTINCTCOUNT(FactSalesPipeline[OpportunityID]),
+    FactSalesPipeline[IsActive] = TRUE()
+)
+
+Won Opportunities = 
+CALCULATE(
+    DISTINCTCOUNT(FactSalesPipeline[OpportunityID]),
+    FactSalesPipeline[IsWon] = TRUE()
+)
+
+Win Rate = 
+VAR TotalOpportunities = 
+    CALCULATE(
+        DISTINCTCOUNT(FactSalesPipeline[OpportunityID]),
+        FactSalesPipeline[IsActive] = FALSE()
+    )
+VAR WonOpps = [Won Opportunities]
+RETURN
+    DIVIDE(WonOpps, TotalOpportunities, 0)
+
+Average Deal Size = 
+AVERAGEX(
+    VALUES(FactSalesPipeline[OpportunityID]),
+    CALCULATE(SUM(FactSalesPipeline[EstimatedValue]))
+)
+
+Pipeline Coverage = 
+DIVIDE(
+    [Total Pipeline Value],
+    [Sales Target],
+    0
+)
+
+Weighted Pipeline Value = 
+SUMX(
+    FactSalesPipeline,
+    FactSalesPipeline[EstimatedValue] * FactSalesPipeline[ProbabilityPercent] / 100
+)
+
+-- ==========================================
+-- PIPELINE STAGE ANALYSIS
+-- ==========================================
+
+Opportunities in Prospecting = 
+CALCULATE(
+    DISTINCTCOUNT(FactSalesPipeline[OpportunityID]),
+    FactSalesPipeline[OpportunityStage] = "Prospecting"
+)
+
+Opportunities in Qualification = 
+CALCULATE(
+    DISTINCTCOUNT(FactSalesPipeline[OpportunityID]),
+    FactSalesPipeline[OpportunityStage] = "Qualification"
+)
+
+Opportunities in Proposal = 
+CALCULATE(
+    DISTINCTCOUNT(FactSalesPipeline[OpportunityID]),
+    FactSalesPipeline[OpportunityStage] = "Proposal"
+)
+
+Opportunities in Negotiation = 
+CALCULATE(
+    DISTINCTCOUNT(FactSalesPipeline[OpportunityID]),
+    FactSalesPipeline[OpportunityStage] = "Negotiation"
+)
+
+Conversion Rate to Next Stage = 
+-- This would be calculated based on historical stage transitions
+-- Placeholder for demonstration
+0.65
+
+-- ==========================================
+-- COMPOSITE KPIs
+-- ==========================================
+
+Operational Efficiency Score = 
+-- Composite score (0-100)
+VAR FulfillmentScore = [Fulfillment Rate] * 30
+VAR StockoutScore = (1 - [Stockout Rate]) * 20
+VAR ProcessingScore = 
+    SWITCH(
+        TRUE(),
+        [Average Processing Time Hours] <= 24, 25,
+        [Average Processing Time Hours] <= 48, 20,
+        [Average Processing Time Hours] <= 72, 15,
+        10
+    )
+VAR UtilizationScore = [Employee Utilization Rate] * 25
+RETURN
+    FulfillmentScore + StockoutScore + ProcessingScore + UtilizationScore
+
+Customer Health Score = 
+-- Composite score (0-100)
+VAR SatisfactionScore = ([Average Satisfaction Score] / 5) * 40
+VAR RetentionScore = (1 - [Churn Rate]) * 30
+VAR EngagementScore = 
+    SWITCH(
+        TRUE(),
+        [Average Response Time Hours] <= 2, 30,
+        [Average Response Time Hours] <= 6, 25,
+        [Average Response Time Hours] <= 12, 20,
+        [Average Response Time Hours] <= 24, 15,
+        10
+    )
+RETURN
+    SatisfactionScore + RetentionScore + EngagementScore
+
+-- ==========================================
+-- TREND INDICATORS
+-- ==========================================
+
+Customer Satisfaction Trend = 
+VAR CurrentScore = [Average Satisfaction Score]
+VAR PreviousScore = 
+    CALCULATE(
+        [Average Satisfaction Score],
+        DATEADD(DimDate[FullDate], -1, MONTH)
+    )
+RETURN
+    SWITCH(
+        TRUE(),
+        CurrentScore > PreviousScore, "↑ Improving",
+        CurrentScore = PreviousScore, "→ Stable",
+        "↓ Declining"
+    )
+
+Operational Efficiency Trend = 
+VAR CurrentEfficiency = [Operational Efficiency Score]
+VAR PreviousEfficiency = 
+    CALCULATE(
+        [Operational Efficiency Score],
+        DATEADD(DimDate[FullDate], -1, MONTH)
+    )
+RETURN
+    CurrentEfficiency - PreviousEfficiency
