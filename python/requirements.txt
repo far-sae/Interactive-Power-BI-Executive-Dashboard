@@ -1,0 +1,55 @@
+# Python Requirements for Power BI Executive Dashboard
+# Install with: pip install -r requirements.txt
+
+# Core Data Science Libraries
+pandas>=1.5.0
+numpy>=1.23.0
+scipy>=1.9.0
+
+# Machine Learning
+scikit-learn>=1.1.0
+
+# Time Series Analysis
+statsmodels>=0.13.0
+
+# Data Visualization (for Python visuals in Power BI)
+matplotlib>=3.6.0
+seaborn>=0.12.0
+plotly>=5.11.0
+
+# Database Connectivity
+pyodbc>=4.0.34
+sqlalchemy>=1.4.0
+
+# API Integration
+requests>=2.28.0
+python-dotenv>=0.21.0
+
+# Excel Integration
+openpyxl>=3.0.10
+xlrd>=2.0.1
+
+# Cloud Platform SDKs
+azure-identity>=1.12.0
+azure-storage-blob>=12.14.0
+boto3>=1.26.0  # AWS SDK
+
+# Email Automation
+smtplib  # Built-in
+email  # Built-in
+
+# Utility Libraries
+python-dateutil>=2.8.2
+pytz>=2022.6
+
+# Performance & Optimization
+numba>=0.56.0  # Optional: for numerical performance
+
+# Testing (Optional)
+pytest>=7.2.0
+pytest-cov>=4.0.0
+
+# Jupyter Notebooks (for development)
+jupyter>=1.0.0
+notebook>=6.5.0
+ipykernel>=6.19.0
